@@ -11,6 +11,11 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
+
+import os
+
+load_dotenv(dotenv_path=".env")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,7 +42,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "app"
+    "app",
+    "django_python3_ldap",
 ]
 
 MIDDLEWARE = [
@@ -50,12 +56,41 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+AUTHENTICATION_BACKENDS = [
+    "django_python3_ldap.auth.LDAPBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+# LDAP CONFIG
+LDAP_AUTH_URL = os.getenv("LDAP_AUTH_URL", "LDAP_AUTH_URL")
+LDAP_AUTH_USER_FIELDS = {
+    "username": "sAMAccountName",
+}
+LDAP_AUTH_SEARCH_BASE = os.getenv("LDAP_AUTH_SEARCH_BASE", "")
+LDAP_AUTH_USE_TLS = False
+LDAP_AUTH_CONNECTION_USERNAME = os.getenv("LDAP_AUTH_CONNECTION_USERNAME", "")
+LDAP_AUTH_CONNECTION_PASSWORD = os.getenv("LDAP_AUTH_CONNECTION_PASSWORD", "")
+LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN =os.getenv("LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN", "")
+LDAP_AUTH_USER_FIELDS = {
+    "username": "sAMAccountName",
+    "first_name": "givenName",
+    "last_name": "sn",
+    "email": "mail",
+}
+LDAP_AUTH_USER_LOOKUP_FIELDS = ("username",)
+LDAP_AUTH_FORMAT_USERNAME = (
+    "django_python3_ldap.utils.format_username_active_directory_principal"
+)
+LDAP_AUTH_OBJECT_CLASS = "user"
+LDAP_AUTH_FORMAT_SEARCH_FILTERS = "django_python3_ldap.utils.format_search_filters"
+
 ROOT_URLCONF = "geospatial_monitoring.urls"
+
 
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [os.path.join(BASE_DIR, "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -122,3 +157,6 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
