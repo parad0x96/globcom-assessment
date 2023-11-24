@@ -36,6 +36,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -44,10 +45,11 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "app",
     "django_python3_ldap",
+    
 ]
-
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -57,8 +59,9 @@ MIDDLEWARE = [
 ]
 
 AUTHENTICATION_BACKENDS = [
-    "django_python3_ldap.auth.LDAPBackend",
     "django.contrib.auth.backends.ModelBackend",
+    "django_python3_ldap.auth.LDAPBackend",
+    
 ]
 
 # LDAP CONFIG
@@ -84,6 +87,9 @@ LDAP_AUTH_FORMAT_USERNAME = (
 LDAP_AUTH_OBJECT_CLASS = "user"
 LDAP_AUTH_FORMAT_SEARCH_FILTERS = "django_python3_ldap.utils.format_search_filters"
 
+LDAP_AUTH_CONNECT_TIMEOUT = 5
+LDAP_AUTH_RECEIVE_TIMEOUT = 5
+
 ROOT_URLCONF = "geospatial_monitoring.urls"
 
 
@@ -103,7 +109,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "geospatial_monitoring.wsgi.application"
+#WSGI_APPLICATION = "geospatial_monitoring.wsgi.application"
 
 
 # Database
@@ -116,6 +122,12 @@ DATABASES = {
     }
 }
 
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -160,3 +172,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
+
+ASGI_APPLICATION = "geospatial_monitoring.asgi.application"
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+STORAGES = {
+    # ...
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
