@@ -1,37 +1,48 @@
 # your_app/management/commands/generate_sensor_data.py
 import random
-from random import randint
 import json
 import asyncio
 from django.core.management.base import BaseCommand
-from app.models import SensorData
+from app.models import SensorData, SensorDataType
 from django.utils import timezone
+from channels.db import database_sync_to_async
 import websockets
-from time import sleep
 
 class Command(BaseCommand):
     help = 'Generate dummy sensor data and send to WebSocket'
 
-    async def send_to_websocket(self, data):
-        uri = "ws://127.0.0.1:8000/ws/sensor-data/"  
-        async with websockets.connect(uri) as websocket:
-            await websocket.send(json.dumps(data))
-            print(f"Sent to WebSocket: {data}")
+    async def send_to_websocket(self, data, websocket):
+        await websocket.send(json.dumps(data))
+        print(f"Sent to WebSocket: {data}")
 
-    def handle(self, *args, **kwargs):
+    async def generate_and_send_data(self, websocket):
         for i in range(100):
             sensor_data = {
-                'pressure': random.uniform(900, 1100),
-                'steam_injection': random.uniform(0, 100),
-                'temperature': random.uniform(20, 30),
+                'value': random.uniform(0, 100),
+                'type': "temperature",
                 'timestamp': timezone.now().isoformat(),
-                'latitude': random.uniform(-90, 90),
-                'longitude': random.uniform(-180, 180),
-                'sensor_id': randint(0,10)
+                'latitude': random.uniform(-30, 30),
+                'longitude': random.uniform(-30, 30),
+                'sensor_id': str(random.randint(0, 10))
             }
+            await self.create_sensor_data(sensor_data)
+            await self.send_to_websocket(sensor_data, websocket)
+            await asyncio.sleep(3)
 
-            # SensorData.objects.create(**sensor_data)
-            asyncio.run(self.send_to_websocket(sensor_data))
-            sleep(3)
+    @database_sync_to_async
+    def create_sensor_data(self, sensor_data):
+        return SensorData.objects.create(**sensor_data)
+    
+    async def connect_to_websocket(self):
+        uri = "ws://127.0.0.1:8000/ws/sensor-data/"
+        websocket = await websockets.connect(uri)
+        print("Connected to WebSocket")
+        return websocket
 
-        self.stdout.write(self.style.SUCCESS('Dummy data created and sent to WebSocket successfully'))
+    def handle(self, *args, **kwargs):
+        asyncio.get_event_loop().run_until_complete(self.run())
+
+    async def run(self):
+        websocket = await self.connect_to_websocket()
+        await self.generate_and_send_data(websocket)
+        await websocket.close()
